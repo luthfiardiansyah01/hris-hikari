@@ -1,0 +1,266 @@
+// Prisma schema for Absensi & Payroll - Bimbel/Les Privat
+// SQLite for dev; portable to PostgreSQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Auth ----------
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  name       String
+  role       String   @default("KARYAWAN") // ADMIN | KARYAWAN
+  karyawanId String?  @unique
+  karyawan   Karyawan? @relation(fields: [karyawanId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ---------- Master Data ----------
+model Karyawan {
+  id        String   @id @default(cuid())
+  nama      String
+  email     String   @unique
+  telepon   String?
+  tipe      String   // FIXED | FLEXIBLE
+  gajiPokok Int      @default(0) // monthly salary for FIXED type
+  status    String   @default("AKTIF") // AKTIF | NONAKTIF
+  alamat    String?
+  foto      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User?
+  sesiTutor   Sesi[]       @relation("SesiTutor")
+  absensi     Absensi[]
+  cuti        Cuti[]
+  rekapGaji   RekapGaji[]
+  notifikasi  Notifikasi[]
+}
+
+model Program {
+  id          String   @id @default(cuid())
+  nama        String
+  tarifPerJam Int      // hourly rate in Rupiah (same for all tutors)
+  deskripsi   String?
+  warna       String?  // calendar color
+  status      String   @default("AKTIF") // AKTIF | NONAKTIF
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sesi         Sesi[]
+  siswaProgram SiswaProgram[]
+}
+
+model Siswa {
+  id        String   @id @default(cuid())
+  nama      String
+  namaWali  String?
+  telepon   String?
+  email     String?
+  alamat    String?
+  catatan   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sesi         Sesi[]
+  siswaProgram SiswaProgram[]
+}
+
+model SiswaProgram {
+  siswaId   String
+  programId String
+  siswa     Siswa   @relation(fields: [siswaId], references: [id])
+  program   Program @relation(fields: [programId], references: [id])
+
+  @@id([siswaId, programId])
+}
+
+// ---------- Sesi (jadwal + absensi tutor flexible) ----------
+model Sesi {
+  id            String   @id @default(cuid())
+  tanggal       DateTime // the date (day) of the session
+  jamMulai      DateTime // session start time
+  jamSelesai    DateTime // session end time
+  tutorId       String
+  programId     String
+  siswaId       String
+  tarifSnapshot Int      // hourly rate frozen at creation
+  status        String   @default("TERJADWAL")
+  // TERJADWAL | BERJALAN | SELESAI | MENUNGGU_KONFIRMASI | DIBATALKAN
+  catatan       String?
+
+  // Attendance fields (flexible time)
+  checkInAt      DateTime?
+  checkOutAt     DateTime?
+  checkInFoto    String? // file path in /uploads
+  checkOutFoto   String?
+  checkInLat     Float?
+  checkInLng     Float?
+  checkOutLat    Float?
+  checkOutLng    Float?
+  terlambatMenit Int?    // minutes late; null if on time
+  confirmed      Boolean @default(true) // false if waiting manual confirmation
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tutor   Karyawan @relation("SesiTutor", fields: [tutorId], references: [id])
+  program Program  @relation(fields: [programId], references: [id])
+  siswa   Siswa    @relation(fields: [siswaId], references: [id])
+  potongan Potongan[]
+  rekapItem RekapSesi?
+}
+
+// ---------- Absensi fixed-time (harian staf kantor) ----------
+model Absensi {
+  id             String   @id @default(cuid())
+  karyawanId     String
+  tanggal        DateTime
+  jamMasuk       DateTime?
+  jamPulang      DateTime?
+  gpsMasukLat    Float?
+  gpsMasukLng    Float?
+  gpsPulangLat   Float?
+  gpsPulangLng   Float?
+  status         String   @default("TIDAK_HADIR")
+  // HADIR | TERLAMBAT | TIDAK_HADIR | CUTI | LIBUR
+  terlambatMenit Int?
+  pulangCepatMenit Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  karyawan  Karyawan @relation(fields: [karyawanId], references: [id])
+  potongan  Potongan[]
+  rekapItem RekapAbsensi?
+
+  @@unique([karyawanId, tanggal])
+}
+
+// ---------- Potongan ----------
+model Potongan {
+  id            String   @id @default(cuid())
+  nominal       Int
+  alasan        String
+  tipe          String   // PER_KEJADIAN | PER_PERIODE
+  absensiId     String?
+  sesiId        String?
+  periodeGajiId String?
+
+  createdAt DateTime @default(now())
+
+  absensi     Absensi?     @relation(fields: [absensiId], references: [id])
+  sesi        Sesi?        @relation(fields: [sesiId], references: [id])
+  periodeGaji PeriodeGaji? @relation(fields: [periodeGajiId], references: [id])
+}
+
+// ---------- Cuti & Hari Libur ----------
+model Cuti {
+  id            String   @id @default(cuid())
+  karyawanId    String
+  tanggalMulai  DateTime
+  tanggalSelesai DateTime
+  alasan        String
+  status        String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  createdAt     DateTime @default(now())
+
+  karyawan Karyawan @relation(fields: [karyawanId], references: [id])
+}
+
+model HariLibur {
+  id        String   @id @default(cuid())
+  tanggal   DateTime @unique
+  nama      String
+  recurring Boolean  @default(false)
+}
+
+// ---------- Pengaturan ----------
+model Pengaturan {
+  id                      String  @id @default("default") @unique
+  kantorLat               Float
+  kantorLng               Float
+  kantorRadiusMeter       Int     @default(100)
+  jamMasukFixed           String  @default("07:30")
+  jamPulangFixed          String  @default("17:00")
+  toleransiTerlambatMenit Int     @default(1)
+  checkInWindowMin        Int     @default(15) // minutes before session start
+  checkInWindowMax        Int     @default(30) // max minutes before
+  namaPerusahaan          String  @default("Bimbel Cerdas")
+}
+
+// ---------- Payroll ----------
+model PeriodeGaji {
+  id        String   @id @default(cuid())
+  bulan     Int // 1-12
+  tahun     Int
+  status    String   @default("DRAFT") // DRAFT | TERKUNCI
+  catatan   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rekap    RekapGaji[]
+  potongan Potongan[]
+
+  @@unique([bulan, tahun])
+}
+
+model RekapGaji {
+  id              String   @id @default(cuid())
+  periodeGajiId   String
+  karyawanId      String
+  tipe            String   // FIXED | FLEXIBLE
+  gajiPokok       Int      @default(0)
+  totalHonor      Int      @default(0)
+  totalPotongan   Int      @default(0)
+  totalGaji       Int      @default(0)
+  jumlahHadir     Int      @default(0)
+  jumlahTerlambat Int      @default(0)
+  jumlahTidakHadir Int     @default(0)
+  jumlahSesi      Int      @default(0)
+  jumlahSesiDibatalkan Int  @default(0)
+
+  periodeGaji PeriodeGaji  @relation(fields: [periodeGajiId], references: [id])
+  karyawan    Karyawan     @relation(fields: [karyawanId], references: [id])
+  rekapAbsensi RekapAbsensi[]
+  rekapSesi    RekapSesi[]
+}
+
+model RekapAbsensi {
+  id          String @id @default(cuid())
+  rekapGajiId String
+  absensiId   String @unique
+
+  rekapGaji RekapGaji @relation(fields: [rekapGajiId], references: [id], onDelete: Cascade)
+  absensi   Absensi   @relation(fields: [absensiId], references: [id], onDelete: Cascade)
+}
+
+model RekapSesi {
+  id          String @id @default(cuid())
+  rekapGajiId String
+  sesiId      String @unique
+
+  rekapGaji RekapGaji @relation(fields: [rekapGajiId], references: [id], onDelete: Cascade)
+  sesi      Sesi      @relation(fields: [sesiId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Notifikasi ----------
+model Notifikasi {
+  id         String   @id @default(cuid())
+  karyawanId String
+  tipe       String   // JADWAL_BARU | SESI_DIBATALKAN | SESI_RESCHEDULE | REMINDER_CEKIN | dll
+  judul      String
+  pesan      String
+  dataId     String?
+  dibaca     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  karyawan Karyawan @relation(fields: [karyawanId], references: [id])
+}
