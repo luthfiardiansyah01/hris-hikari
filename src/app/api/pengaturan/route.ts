@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { db } from "@/lib/db"
 import { pengaturanSchema } from "@/lib/validators"
 import { ok, badRequest, serverError } from "@/lib/responses"
+import { getActingUser, guardAdmin } from "@/lib/session"
 
 const DEFAULTS = {
   id: "default",
@@ -25,6 +26,8 @@ export async function GET(_req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const guard = guardAdmin(await getActingUser(req))
+  if (guard) return guard
   try {
     const body = await req.json()
     const parsed = pengaturanSchema.parse(body)

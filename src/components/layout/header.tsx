@@ -1,8 +1,8 @@
 "use client"
 
 import { useAppStore } from "@/store/app-store"
-import { apiFetch } from "@/lib/api-client"
-import { useQuery } from "@tanstack/react-query"
+import { apiFetch, clearSession } from "@/lib/api-client"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -13,30 +13,37 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Bell, ChevronDown, GraduationCap, Shield, User as UserIcon, Users } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { BadgeCheck, Bell, GraduationCap, LogOut } from "lucide-react"
 
-type Switchable = { id: string; nama: string; tipe: string; email: string }
+function getInitials(name: string) {
+  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase()
+}
+
+function getRoleLabel(role: string, tipe?: string | null) {
+  if (role === "ADMIN") return "Administrator"
+  if (tipe === "FIXED") return "Staf Tetap"
+  if (tipe === "FLEXIBLE") return "Tutor"
+  return "Karyawan"
+}
+
+function getRoleBadgeClass(role: string, tipe?: string | null) {
+  if (role === "ADMIN") return "bg-violet-100 text-violet-700"
+  if (tipe === "FLEXIBLE") return "bg-blue-100 text-blue-700"
+  return "bg-emerald-100 text-emerald-700"
+}
 
 export function Header() {
-  const {
-    portal,
-    setPortal,
-    actingKaryawanId,
-    actingKaryawanNama,
-    actingTipe,
-    setActing,
-    setAdminView,
-    setTutorView,
-  } = useAppStore()
+  const { session, logout, actingKaryawanId } = useAppStore()
+  const qc = useQueryClient()
 
-  const { data: sessionData } = useQuery({
-    queryKey: ["session"],
-    queryFn: () => apiFetch<{ user: any; switchable: Switchable[] }>("/api/session"),
-  })
-  const switchable: Switchable[] = sessionData?.switchable ?? []
+  function handleLogout() {
+    clearSession()
+    logout()
+    qc.clear()
+  }
 
-  // Notifications (only when acting as a karyawan)
+  // Unread notifications for the acting user
   const { data: notifs } = useQuery({
     queryKey: ["notifikasi", actingKaryawanId],
     queryFn: () =>
@@ -44,72 +51,31 @@ export function Header() {
         ? apiFetch<any[]>(`/api/notifikasi?karyawanId=${actingKaryawanId}`)
         : Promise.resolve([]),
     enabled: actingKaryawanId !== "admin",
+    refetchInterval: 60_000,
   })
-  const unread = notifs?.filter((n: any) => !n.dibaca).length || 0
+  const unread = notifs?.filter((n: any) => !n.dibaca).length ?? 0
 
-  const switchTo = (s: Switchable) => {
-    setActing(s.id, s.nama, s.tipe)
-    // if it's a tutor, go to tutor portal
-    if (s.tipe === "FLEXIBLE") {
-      setPortal("TUTOR")
-      setTutorView("jadwal-saya")
-    }
-  }
-
-  const switchToAdmin = () => {
-    setActing("admin", "Administrator", null)
-    setPortal("ADMIN")
-    setAdminView("dashboard")
-  }
+  const displayNama = session?.nama  ?? "Administrator"
+  const displayRole = session?.role  ?? "ADMIN"
+  const displayTipe = session?.tipe  ?? null
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-4">
+      {/* Logo */}
       <div className="flex items-center gap-2 font-semibold">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <GraduationCap className="h-5 w-5" />
         </div>
-        <span className="hidden sm:inline">Bimbel Cerdas</span>
+        <span className="hidden text-sm sm:inline">Bimbel Cerdas</span>
       </div>
 
-      <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-        {/* Portal switcher */}
-        <div className="flex items-center rounded-lg border bg-muted/50 p-0.5">
-          <Button
-            size="sm"
-            variant={portal === "ADMIN" ? "default" : "ghost"}
-            className="h-7 gap-1.5"
-            onClick={() => {
-              setPortal("ADMIN")
-              setAdminView("dashboard")
-            }}
-          >
-            <Shield className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Admin</span>
-          </Button>
-          <Button
-            size="sm"
-            variant={portal === "TUTOR" ? "default" : "ghost"}
-            className="h-7 gap-1.5"
-            onClick={() => {
-              // If acting as admin, switch to first tutor for demo
-              if (actingKaryawanId === "admin" && switchable.length) {
-                const firstTutor = switchable.find((s) => s.tipe === "FLEXIBLE") || switchable[0]
-                if (firstTutor) setActing(firstTutor.id, firstTutor.nama, firstTutor.tipe)
-              }
-              setPortal("TUTOR")
-              setTutorView("jadwal-saya")
-            }}
-          >
-            <UserIcon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Tutor</span>
-          </Button>
-        </div>
+      <div className="ml-auto flex items-center gap-2">
 
-        {/* Notifications */}
+        {/* Notifications bell */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="icon" variant="ghost" className="relative h-9 w-9">
-              <Bell className="h-4.5 w-4.5" />
+              <Bell className="h-[18px] w-[18px]" />
               {unread > 0 && (
                 <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
                   {unread > 9 ? "9+" : unread}
@@ -118,83 +84,73 @@ export function Header() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notifikasi</DropdownMenuLabel>
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <span>Notifikasi</span>
+              {unread > 0 && (
+                <Badge variant="secondary" className="text-xs">{unread} belum dibaca</Badge>
+              )}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {notifs && notifs.length > 0 ? (
-              notifs.slice(0, 8).map((n: any) => (
-                <DropdownMenuItem
-                  key={n.id}
-                  className="flex flex-col items-start gap-0.5 py-2"
-                  onClick={async () => {
-                    if (!n.dibaca) {
-                      await apiFetch(`/api/notifikasi/${n.id}/read`, { method: "POST" })
-                    }
-                  }}
-                >
-                  <span className="text-sm font-medium">{n.judul}</span>
-                  <span className="text-xs text-muted-foreground">{n.pesan}</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {new Date(n.createdAt).toLocaleString("id-ID")}
-                  </span>
-                </DropdownMenuItem>
-              ))
+              <div className="max-h-72 overflow-y-auto">
+                {notifs.slice(0, 10).map((n: any) => (
+                  <DropdownMenuItem
+                    key={n.id}
+                    className={`flex flex-col items-start gap-0.5 py-2.5 ${!n.dibaca ? "bg-primary/5" : ""}`}
+                    onClick={async () => {
+                      if (!n.dibaca) {
+                        await apiFetch(`/api/notifikasi/${n.id}/read`, { method: "POST" })
+                        qc.invalidateQueries({ queryKey: ["notifikasi", actingKaryawanId] })
+                      }
+                    }}
+                  >
+                    <div className="flex w-full items-start gap-2">
+                      {!n.dibaca && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />}
+                      <div className={!n.dibaca ? "" : "ml-4"}>
+                        <span className="text-sm font-medium">{n.judul}</span>
+                        <p className="text-xs text-muted-foreground">{n.pesan}</p>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(n.createdAt).toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </div>
             ) : (
-              <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+              <div className="px-2 py-8 text-center text-sm text-muted-foreground">
                 Tidak ada notifikasi
               </div>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Acting user switcher */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-9 gap-1.5 px-1.5 sm:pr-3">
-              <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-primary/10 text-xs text-primary">
-                  {actingKaryawanNama.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden text-left sm:block">
-                <div className="text-xs font-medium leading-tight">{actingKaryawanNama}</div>
-                <div className="text-[10px] text-muted-foreground">
-                  {actingKaryawanId === "admin" ? "Administrator" : actingTipe === "FIXED" ? "Staf" : "Tutor"}
-                </div>
-              </div>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64">
-            <DropdownMenuLabel>Berlakuk sebagai</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={switchToAdmin} className="gap-2">
-              <Shield className="h-4 w-4 text-primary" />
-              <div className="flex flex-col">
-                <span className="text-sm">Administrator</span>
-                <span className="text-[10px] text-muted-foreground">Akses penuh</span>
-              </div>
-              {actingKaryawanId === "admin" && <Badge className="ml-auto">aktif</Badge>}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Tutor / Staf
-            </DropdownMenuLabel>
-            <div className="max-h-64 overflow-y-auto">
-              {switchable.map((s) => (
-                <DropdownMenuItem key={s.id} onClick={() => switchTo(s)} className="gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <div className="flex flex-col">
-                    <span className="text-sm">{s.nama}</span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {s.tipe === "FIXED" ? "Fixed Time" : "Flexible Time"} · {s.email}
-                    </span>
-                  </div>
-                  {actingKaryawanId === s.id && <Badge className="ml-auto">aktif</Badge>}
-                </DropdownMenuItem>
-              ))}
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Profile — display only, not clickable */}
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-2.5 py-1.5">
+          <Avatar className="h-7 w-7 shrink-0">
+            <AvatarFallback className={`text-xs font-bold ${getRoleBadgeClass(displayRole, displayTipe)}`}>
+              {getInitials(displayNama)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="hidden flex-col items-start sm:flex">
+            <span className="text-xs font-semibold leading-tight">{displayNama}</span>
+            <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium leading-tight ${getRoleBadgeClass(displayRole, displayTipe).split(" ")[1]}`}>
+              <BadgeCheck className="h-2.5 w-2.5" />
+              {getRoleLabel(displayRole, displayTipe)}
+            </span>
+          </div>
+        </div>
+
+        {/* Logout */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 text-muted-foreground hover:text-destructive"
+          onClick={handleLogout}
+          title="Keluar"
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
       </div>
     </header>
   )

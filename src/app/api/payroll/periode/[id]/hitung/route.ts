@@ -3,9 +3,12 @@ import { db } from "@/lib/db"
 import { ok, notFound, badRequest } from "@/lib/responses"
 import { persistRekap } from "@/lib/payroll"
 import { STATUS_PERIODE } from "@/lib/constants"
+import { getActingUser, guardAdmin } from "@/lib/session"
 
 // Recalculate recaps for the period.
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const guard = guardAdmin(await getActingUser(_req))
+  if (guard) return guard
   const { id } = await params
   const p = await db.periodeGaji.findUnique({ where: { id } })
   if (!p) return notFound("Periode tidak ditemukan")

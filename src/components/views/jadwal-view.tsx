@@ -485,7 +485,7 @@ export function JadwalView() {
       />
 
       <CancelDialog
-        key={cancelTarget?.id || "none"}
+        key={cancelTarget?.id || "cancel-none"}
         target={cancelTarget}
         tutors={tutorsQ.data ?? []}
         onCancel={(assignReplacementTo) =>
@@ -497,7 +497,7 @@ export function JadwalView() {
       />
 
       <RescheduleDialog
-        key={rescheduleTarget?.id || "none"}
+        key={rescheduleTarget?.id || "reschedule-none"}
         target={rescheduleTarget}
         onOpenChange={(o) => !o && setRescheduleTarget(null)}
         onSubmit={(body) =>

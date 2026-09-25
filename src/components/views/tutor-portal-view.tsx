@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { apiFetch } from "@/lib/api-client"
+import { apiFetch, clearSession } from "@/lib/api-client"
 import { useAppStore } from "@/store/app-store"
 import { toast } from "sonner"
 import {
@@ -22,6 +22,7 @@ import {
   Bell,
   LogIn,
   LogOut,
+  GraduationCap,
   CheckCircle2,
   AlertTriangle,
   MapPin,
@@ -137,7 +138,7 @@ function relativeTime(iso: string): string {
 // Main view
 // ============================================================
 export function TutorPortalView() {
-  const { tutorView, setTutorView, actingKaryawanId, actingKaryawanNama } =
+  const { tutorView, setTutorView, actingKaryawanId, actingKaryawanNama, session, logout } =
     useAppStore()
   const [selectedSesiId, setSelectedSesiId] = useState<string | null>(null)
 
@@ -150,6 +151,11 @@ export function TutorPortalView() {
     setSelectedSesiId(null)
   }
 
+  function handleLogout() {
+    clearSession()
+    logout()
+  }
+
   const tabs: {
     key: typeof tutorView
     label: string
@@ -160,24 +166,35 @@ export function TutorPortalView() {
     { key: "notifikasi", label: "Notifikasi", icon: Bell },
   ]
 
+  const displayNama = session?.nama ?? actingKaryawanNama ?? "Tutor"
+  const initials = displayNama.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()
+
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full max-w-3xl flex-col bg-background">
+    <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col bg-background">
       {/* Top header band */}
-      <header className="sticky top-14 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75">
+      <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75">
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <div className="min-w-0">
-            <p className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Portal Tutor
-            </p>
-            <h1 className="truncate text-base font-semibold sm:text-lg">
-              Halo, {isAdmin ? "Admin" : actingKaryawanNama || "Tutor"}
-            </h1>
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Avatar */}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold leading-tight">
+                {isAdmin ? "Administrator" : displayNama}
+              </p>
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
+                Tutor · Flexible Time
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary sm:inline">
-              Flexible Time
-            </span>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Keluar</span>
+          </button>
         </div>
       </header>
 

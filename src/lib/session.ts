@@ -1,10 +1,6 @@
-import { NextRequest } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { USER_ROLE } from "@/lib/constants"
-
-// Lightweight demo session: the acting user is passed via header
-// x-acting-karyawan-id (value = "admin" or a karyawan id).
-// In a production setup this would be replaced by NextAuth/JWT.
 
 export type ActingUser = {
   role: "ADMIN" | "KARYAWAN"
@@ -13,10 +9,7 @@ export type ActingUser = {
   tipe?: "FIXED" | "FLEXIBLE"
 }
 
-const ADMIN_USER: ActingUser = {
-  role: "ADMIN",
-  nama: "Administrator",
-}
+const ADMIN_USER: ActingUser = { role: "ADMIN", nama: "Administrator" }
 
 export async function getActingUser(req: NextRequest): Promise<ActingUser> {
   const id = req.headers.get("x-acting-karyawan-id") || "admin"
@@ -33,4 +26,17 @@ export async function getActingUser(req: NextRequest): Promise<ActingUser> {
 
 export function requireAdmin(user: ActingUser): boolean {
   return user.role === "ADMIN"
+}
+
+/** Returns 403 response if user is not ADMIN, null if allowed. */
+export function guardAdmin(user: ActingUser): NextResponse | null {
+  if (user.role === "ADMIN") return null
+  return NextResponse.json({ error: "Akses ditolak. Hanya admin yang diizinkan." }, { status: 403 })
+}
+
+/** Returns 403 if user is neither ADMIN nor the matching karyawan. */
+export function guardSelf(user: ActingUser, karyawanId: string): NextResponse | null {
+  if (user.role === "ADMIN") return null
+  if (user.karyawanId === karyawanId) return null
+  return NextResponse.json({ error: "Akses ditolak." }, { status: 403 })
 }

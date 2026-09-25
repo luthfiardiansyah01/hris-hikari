@@ -2,9 +2,12 @@ import { NextRequest } from "next/server"
 import { db } from "@/lib/db"
 import { ok, notFound, badRequest, serverError } from "@/lib/responses"
 import { STATUS_SESI } from "@/lib/constants"
+import { getActingUser, guardAdmin } from "@/lib/session"
 
 // Admin manually confirms a session that is in MENUNGGU_KONFIRMASI status.
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const guard = guardAdmin(await getActingUser(req))
+  if (guard) return guard
   const { id } = await params
   try {
     const sesi = await db.sesi.findUnique({ where: { id } })
