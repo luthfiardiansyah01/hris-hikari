@@ -1,0 +1,153 @@
+# HRIS Hikari — PT Hikari Bridge Indonesia
+
+Sistem Human Resource Information System (HRIS) internal untuk PT Hikari Bridge Indonesia. Mengelola absensi, jadwal tutor, payroll, dan cuti secara terpadu dalam satu platform.
+
+---
+
+## Fitur Utama
+
+### Portal Admin
+- Dashboard ringkasan operasional
+- Manajemen karyawan & tutor
+- Konfirmasi sesi & jadwal tutor
+- Payroll bulanan (DRAFT → TERKUNCI)
+- Manajemen siswa & program
+- Pengaturan sistem
+
+### Portal Karyawan (Staf Tetap)
+- Absensi harian (check-in/check-out)
+- Pengajuan cuti & izin
+- Riwayat kehadiran
+
+### Portal Tutor (Staf Fleksibel)
+- Jadwal sesi mengajar
+- Check-in/check-out sesi
+- Reschedule & laporan sesi
+
+---
+
+## Tech Stack
+
+| Layer | Teknologi |
+|-------|-----------|
+| Framework | Next.js 16 (App Router) |
+| Bahasa | TypeScript 5 |
+| UI | shadcn/ui + Radix UI + Tailwind CSS v4 |
+| Database | SQLite via Prisma ORM |
+| Runtime | Bun |
+| State | Zustand + TanStack Query |
+| Auth | Session-based (localStorage `hris-session`) |
+
+---
+
+## Struktur Folder
+
+```
+├── prisma/
+│   ├── schema.prisma       # Skema database
+│   └── seed.ts             # Data dummy 3 tahun
+├── public/
+│   └── hikari-logo.png     # Logo PT Hikari Bridge Indonesia
+├── src/
+│   ├── app/
+│   │   ├── api/            # Route handlers (REST API)
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   └── components/
+│       ├── layout/         # AppShell, Header, Sidebar
+│       ├── shared/         # Komponen UI bersama
+│       ├── ui/             # shadcn/ui components
+│       └── views/          # Halaman per fitur
+```
+
+---
+
+## Cara Menjalankan
+
+### Prasyarat
+- [Bun](https://bun.sh) v1.x
+- Node.js 20+
+
+### Instalasi
+
+```bash
+bun install
+```
+
+### Setup Database
+
+```bash
+# Generate Prisma client
+bun run db:generate
+
+# Push skema ke database
+bun run db:push
+
+# Isi data dummy
+bun run db:seed
+```
+
+### Jalankan Development Server
+
+```bash
+bun run dev
+```
+
+Akses di: [http://localhost:3000](http://localhost:3000)
+
+### Build Production
+
+```bash
+bun run build
+bun run start
+```
+
+---
+
+## Akun Default (Seed)
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@hikari.id | `admin123` |
+| Karyawan | (lihat seed) | `karyawan123` |
+| Tutor | (lihat seed) | `tutor123` |
+
+> Ganti password setelah login pertama kali di Pengaturan.
+
+---
+
+## Perintah Database
+
+```bash
+bun run db:push       # Sinkron skema tanpa migrasi
+bun run db:migrate    # Jalankan migrasi
+bun run db:seed       # Reset & isi ulang data dummy
+bun run db:reset      # Reset penuh database
+```
+
+---
+
+## Status Pengembangan
+
+### Tahap 1 — Selesai ✅
+- Role-based auth (Admin / Karyawan / Tutor)
+- Absensi staf tetap dengan validasi GPS
+- Manajemen sesi & jadwal tutor
+- Cuti & izin
+- Payroll bulanan
+- Notifikasi internal
+- Data dummy 3 tahun (100 siswa, 10 staf, 50 tutor)
+
+### Tahap 2 — Planned 🔄
+- Profil karyawan lengkap & manajemen dokumen
+- Slip gaji digital di portal karyawan
+- Penilaian kinerja (KPI)
+- Rekrutmen & onboarding
+- Klaim & reimbursement
+- Laporan & analitik manajemen
+
+---
+
+## Lisensi
+
+Hak cipta © 2026 PT Hikari Bridge Indonesia. Seluruh hak dilindungi.
