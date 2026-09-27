@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { apiFetch } from "@/lib/api-client"
-import { PageHeader, LoadingState, EmptyState, StatusKaryawanBadge } from "@/components/shared/ui"
+import { PageHeader, LoadingState, EmptyState, StatusKaryawanBadge, usePagination, PaginationBar } from "@/components/shared/ui"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,6 +50,7 @@ export function ProgramView() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Program | null>(null)
   const [delId, setDelId] = useState<string | null>(null)
+  const { paged: pagedProgram, page: progPage, totalPages: progTotalPages, setPage: setProgPage } = usePagination(data ?? [], 12)
 
   const saveMut = useMutation({
     mutationFn: async (payload: any) => {
@@ -99,8 +100,9 @@ export function ProgramView() {
       {isLoading ? (
         <LoadingState />
       ) : data && data.length > 0 ? (
+        <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data.map((p) => (
+          {pagedProgram.map((p) => (
             <Card key={p.id} className="overflow-hidden">
               <div className="h-1.5 w-full" style={{ background: p.warna || "#94a3b8" }} />
               <CardContent className="p-4">
@@ -139,6 +141,8 @@ export function ProgramView() {
               </CardContent>
             </Card>
           ))}
+        </div>
+        <PaginationBar page={progPage} totalPages={progTotalPages} total={data.length} pageSize={12} onPageChange={setProgPage} />
         </div>
       ) : (
         <EmptyState

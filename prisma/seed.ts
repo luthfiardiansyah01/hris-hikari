@@ -200,7 +200,7 @@ async function main() {
   await db.pengaturan.create({
     data: {
       id: "default",
-      namaPerusahaan: "Bimbel Cerdas",
+      namaPerusahaan: "PT Hikari Bridge Indonesia",
       kantorLat: -6.200000,
       kantorLng: 106.816666,
       kantorRadiusMeter: 150,
@@ -347,7 +347,7 @@ async function main() {
   // ── 9. sesi FLEXIBLE tutors ───────────────────────────────────────────────────
   console.log("   Generating Sesi for 50 tutor …")
   // Each tutor gets 2-3 fixed weekly slots derived from their index
-  const HOURS_POOL  = [7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19]
+  const HOURS_POOL  = [9, 10, 11, 13, 14, 15, 16, 17, 18, 19]
   const DOW_POOL    = [1, 2, 3, 4, 5, 6] // Mon–Sat
   const DURASI_POOL = [60, 90, 120]
 

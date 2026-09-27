@@ -63,10 +63,8 @@ export function Header() {
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-4">
       {/* Logo */}
       <div className="flex items-center gap-2 font-semibold">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <GraduationCap className="h-5 w-5" />
-        </div>
-        <span className="hidden text-sm sm:inline">Bimbel Cerdas</span>
+        <img src="/hikari-logo.png" alt="Hikari Bridge" className="h-8 w-auto object-contain" />
+        <span className="hidden text-sm sm:inline">PT Hikari Bridge Indonesia</span>
       </div>
 
       <div className="ml-auto flex items-center gap-2">

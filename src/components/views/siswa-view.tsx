@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { apiFetch } from "@/lib/api-client"
-import { PageHeader, LoadingState, EmptyState } from "@/components/shared/ui"
+import { PageHeader, LoadingState, EmptyState, usePagination, PaginationBar } from "@/components/shared/ui"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -123,6 +123,9 @@ export function SiswaView() {
   const filtered = (data || []).filter((s) =>
     s.nama.toLowerCase().includes(search.trim().toLowerCase()),
   )
+  const PAGE_SIZE = 12
+  const { paged: pagedSiswa, page, totalPages, setPage } = usePagination(filtered, PAGE_SIZE)
+  useEffect(() => { setPage(1) }, [search]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-5">
@@ -157,8 +160,9 @@ export function SiswaView() {
       {isLoading ? (
         <LoadingState />
       ) : filtered.length > 0 ? (
+        <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((s) => (
+          {pagedSiswa.map((s) => (
             <Card key={s.id} className="overflow-hidden">
               <CardContent className="p-4">
                 <p className="truncate font-semibold">{s.nama}</p>
@@ -231,6 +235,14 @@ export function SiswaView() {
               </CardContent>
             </Card>
           ))}
+        </div>
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          total={filtered.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
         </div>
       ) : (
         <EmptyState

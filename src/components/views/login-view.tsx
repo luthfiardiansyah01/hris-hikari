@@ -47,11 +47,9 @@ export function LoginView() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-            <GraduationCap className="h-8 w-8" />
-          </div>
+          <img src="/hikari-logo.png" alt="Hikari Bridge" className="h-16 w-auto object-contain" />
           <div className="text-center">
-            <h1 className="text-xl font-bold tracking-tight">Bimbel Cerdas</h1>
+            <h1 className="text-xl font-bold tracking-tight">PT Hikari Bridge Indonesia</h1>
             <p className="text-sm text-muted-foreground">Sistem HRIS</p>
           </div>
         </div>
@@ -134,7 +132,7 @@ export function LoginView() {
         </Card>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} Bimbel Cerdas · v1.0.0
+          © {new Date().getFullYear()} PT Hikari Bridge Indonesia · v1.0.0
         </p>
       </div>
     </div>

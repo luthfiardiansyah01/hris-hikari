@@ -7,6 +7,8 @@ import {
   LoadingState,
   EmptyState,
   StatusSesiBadge,
+  usePagination,
+  PaginationBar,
 } from "@/components/shared/ui"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -183,6 +185,8 @@ function SesiMenungguSection() {
   })
 
   const [rejectId, setRejectId] = useState<string | null>(null)
+  const PAGE_SIZE = 8
+  const { paged: pagedSesi, page, totalPages, setPage } = usePagination(data ?? [], PAGE_SIZE)
 
   const approveMut = useMutation({
     mutationFn: (id: string) =>
@@ -230,8 +234,8 @@ function SesiMenungguSection() {
       <p className="text-sm text-muted-foreground">
         {data.length} sesi menunggu konfirmasi admin
       </p>
-      <div className="max-h-96 space-y-3 overflow-y-auto pr-1 konfirmasi-scroll">
-        {data.map((s) => (
+      <div className="space-y-3">
+        {pagedSesi.map((s) => (
           <SesiMenungguCard
             key={s.id}
             sesi={s}
@@ -241,6 +245,7 @@ function SesiMenungguSection() {
           />
         ))}
       </div>
+      <PaginationBar page={page} totalPages={totalPages} total={data.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       <AlertDialog open={!!rejectId} onOpenChange={(o) => !o && setRejectId(null)}>
         <AlertDialogContent>

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -8,6 +8,9 @@ import {
   LoadingState,
   EmptyState,
   StatusSesiBadge,
+  StatCard,
+  usePagination,
+  PaginationBar,
 } from "@/components/shared/ui"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -74,6 +77,8 @@ import {
   User,
   BookOpen,
   Coins,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -440,6 +445,38 @@ export function JadwalView() {
         </CardContent>
       </Card>
 
+      {/* Stat bar — only daily */}
+      {viewMode === "daily" && !isLoading && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard
+            label="Total Sesi"
+            value={sessions.length}
+            icon={CalendarDays}
+          />
+          <StatCard
+            label="Selesai"
+            value={sessions.filter((s) => s.status === "SELESAI").length}
+            icon={CheckCircle2}
+          />
+          <StatCard
+            label="Dibatalkan"
+            value={sessions.filter((s) => s.status === "DIBATALKAN").length}
+            icon={XCircle}
+          />
+          <StatCard
+            label="Est. Honor"
+            value={formatRupiah(
+              sessions.reduce((sum, s) => {
+                const m = new Date(s.jamMulai)
+                const e = new Date(s.jamSelesai)
+                return sum + hitungHonorSesi(m, e, s.tarifSnapshot)
+              }, 0),
+            )}
+            icon={Coins}
+          />
+        </div>
+      )}
+
       {/* Main content */}
       {isLoading ? (
         <LoadingState rows={4} />
@@ -525,6 +562,9 @@ function DailyView({
   onReschedule: (s: Sesi) => void
   emptyAction?: React.ReactNode
 }) {
+  const PAGE_SIZE = 10
+  const { paged, page, totalPages, setPage } = usePagination(sessions, PAGE_SIZE)
+
   if (sessions.length === 0) {
     return (
       <EmptyState
@@ -536,17 +576,48 @@ function DailyView({
     )
   }
 
+  // Group paged sessions by hour for timeline display
+  const byHour = paged.reduce<Record<number, Sesi[]>>((acc, s) => {
+    const h = new Date(s.jamMulai).getHours()
+    ;(acc[h] ||= []).push(s)
+    return acc
+  }, {})
+  const hours = Object.keys(byHour).map(Number).sort((a, b) => a - b)
+
   return (
-    <div className="space-y-2">
-      {sessions.map((s) => (
-        <SesiRow
-          key={s.id}
-          sesi={s}
-          onEdit={() => onEdit(s)}
-          onCancel={() => onCancel(s)}
-          onReschedule={() => onReschedule(s)}
-        />
-      ))}
+    <div className="space-y-4">
+      {/* Timeline */}
+      <div className="space-y-3">
+        {hours.map((h) => (
+          <div key={h} className="flex gap-3">
+            {/* Hour label */}
+            <div className="w-12 shrink-0 pt-1 text-right">
+              <span className="text-xs font-medium tabular-nums text-muted-foreground">
+                {String(h).padStart(2, "0")}:00
+              </span>
+            </div>
+            {/* Sessions in this hour */}
+            <div className="flex flex-1 flex-col gap-2">
+              {byHour[h].map((s) => (
+                <SesiRow
+                  key={s.id}
+                  sesi={s}
+                  onEdit={() => onEdit(s)}
+                  onCancel={() => onCancel(s)}
+                  onReschedule={() => onReschedule(s)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        total={sessions.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </div>
   )
 }
@@ -567,100 +638,88 @@ function SesiRow({
   const honor = hitungHonorSesi(mulai, selesai, sesi.tarifSnapshot)
   const isCancelled = sesi.status === "DIBATALKAN"
 
+  const durasiMenit = Math.max(1, Math.round((selesai.getTime() - mulai.getTime()) / 60000))
+
   return (
-    <Card className={cn("overflow-hidden", isCancelled && "opacity-60")}>
+    <Card className={cn("overflow-hidden transition-opacity", isCancelled && "opacity-55")}>
       <div className="flex">
         {/* colored left bar */}
         <div
-          className="w-1.5 shrink-0"
+          className="w-1 shrink-0"
           style={{ background: sesi.program.warna || "#94a3b8" }}
         />
-        <CardContent className="flex flex-1 flex-col gap-2 p-3 sm:p-4">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div className="flex items-start gap-2">
-              <Clock className="mt-0.5 h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-semibold tabular-nums">
-                  {formatJam(mulai)} — {formatJam(selesai)}
-                </p>
-                <p className="text-base font-bold leading-tight">
-                  {sesi.program.nama}
-                </p>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <User className="h-3 w-3" /> {sesi.tutor.nama}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <BookOpen className="h-3 w-3" /> {sesi.siswa.nama}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <StatusSesiBadge status={sesi.status} />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <span className="sr-only">Aksi</span>
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                      aria-hidden
-                    >
-                      <circle cx="12" cy="5" r="1.5" />
-                      <circle cx="12" cy="12" r="1.5" />
-                      <circle cx="12" cy="19" r="1.5" />
-                    </svg>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={onEdit}>
-                    <Pencil className="mr-2 h-4 w-4" /> Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={onReschedule}
-                    disabled={isCancelled || sesi.status === "SELESAI"}
-                  >
-                    <ArrowRightLeft className="mr-2 h-4 w-4" /> Reschedule
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={onCancel}
-                    disabled={isCancelled}
-                    className="text-rose-600 focus:text-rose-600"
-                  >
-                    <Ban className="mr-2 h-4 w-4" /> Batalkan
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+        <CardContent className="flex flex-1 items-center gap-3 p-3">
+          {/* Time block */}
+          <div className="hidden w-20 shrink-0 flex-col items-end sm:flex">
+            <span className="text-sm font-bold tabular-nums">{formatJam(mulai)}</span>
+            <span className="text-xs text-muted-foreground tabular-nums">{formatJam(selesai)}</span>
+            <span className="mt-0.5 text-[10px] text-muted-foreground">{durasiMenit} mnt</span>
           </div>
 
-          <Separator className="my-0.5" />
+          <Separator orientation="vertical" className="hidden h-12 sm:block" />
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <Badge variant="outline" className="font-normal">
-                {Math.max(
-                  1,
-                  Math.round(
-                    (selesai.getTime() - mulai.getTime()) / 60000,
-                  ),
-                )}{" "}
-                menit
-              </Badge>
-              {sesi.catatan && (
-                <span className="text-muted-foreground">
-                  “{sesi.catatan}”
-                </span>
-              )}
+          {/* Main info */}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-semibold">{sesi.program.nama}</span>
+              <StatusSesiBadge status={sesi.status} />
             </div>
-            <div className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2 py-1 text-emerald-700 dark:text-emerald-300">
-              <Coins className="h-3.5 w-3.5" />
-              <span className="text-sm font-semibold">{formatRupiah(honor)}</span>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1">
+                <User className="h-3 w-3" /> {sesi.tutor.nama}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <BookOpen className="h-3 w-3" /> {sesi.siswa.nama}
+              </span>
+              {/* time on mobile */}
+              <span className="inline-flex items-center gap-1 sm:hidden">
+                <Clock className="h-3 w-3" /> {formatJam(mulai)} - {formatJam(selesai)}
+              </span>
             </div>
+            {sesi.catatan && (
+              <p className="mt-0.5 truncate text-[11px] italic text-muted-foreground">
+                &ldquo;{sesi.catatan}&rdquo;
+              </p>
+            )}
+          </div>
+
+          {/* Honor + actions */}
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <div className="flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">
+              <Coins className="h-3 w-3" />
+              <span className="text-xs font-semibold tabular-nums">{formatRupiah(honor)}</span>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                  <span className="sr-only">Aksi</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <circle cx="12" cy="5" r="1.5" />
+                    <circle cx="12" cy="12" r="1.5" />
+                    <circle cx="12" cy="19" r="1.5" />
+                  </svg>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={onEdit}>
+                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={onReschedule}
+                  disabled={isCancelled || sesi.status === "SELESAI"}
+                >
+                  <ArrowRightLeft className="mr-2 h-4 w-4" /> Reschedule
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={onCancel}
+                  disabled={isCancelled}
+                  className="text-rose-600 focus:text-rose-600"
+                >
+                  <Ban className="mr-2 h-4 w-4" /> Batalkan
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </div>
@@ -792,10 +851,10 @@ function SesiFormDialog({
     editing ? startOfDay(new Date(editing.tanggal)) : startOfDay(defaultDate),
   )
   const [jamMulai, setJamMulai] = useState(() =>
-    editing ? timeFromDate(editing.jamMulai) : "16:00",
+    editing ? timeFromDate(editing.jamMulai) : "09:00",
   )
   const [jamSelesai, setJamSelesai] = useState(() =>
-    editing ? timeFromDate(editing.jamSelesai) : "18:00",
+    editing ? timeFromDate(editing.jamSelesai) : "10:00",
   )
   const [tutorId, setTutorId] = useState(() => editing?.tutorId || "")
   const [programId, setProgramId] = useState(() => editing?.programId || "")
@@ -886,6 +945,8 @@ function SesiFormDialog({
               <Input
                 id="jamMulai"
                 type="time"
+                min="09:00"
+                max="21:00"
                 value={jamMulai}
                 onChange={(e) => setJamMulai(e.target.value)}
               />
@@ -895,6 +956,8 @@ function SesiFormDialog({
               <Input
                 id="jamSelesai"
                 type="time"
+                min="09:00"
+                max="21:00"
                 value={jamSelesai}
                 onChange={(e) => setJamSelesai(e.target.value)}
               />

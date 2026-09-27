@@ -14,7 +14,7 @@ const DEFAULTS = {
   toleransiTerlambatMenit: 1,
   checkInWindowMin: 15,
   checkInWindowMax: 30,
-  namaPerusahaan: "Bimbel Cerdas",
+  namaPerusahaan: "PT Hikari Bridge Indonesia",
 }
 
 export async function GET(_req: NextRequest) {

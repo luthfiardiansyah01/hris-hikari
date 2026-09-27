@@ -8,6 +8,8 @@ import {
   EmptyState,
   TipeKaryawanBadge,
   StatusKaryawanBadge,
+  usePagination,
+  PaginationBar,
 } from "@/components/shared/ui"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -82,6 +84,7 @@ export function KaryawanView() {
   const qc = useQueryClient()
   const [filterTipe, setFilterTipe] = useState<string>("SEMUA")
   const [filterStatus, setFilterStatus] = useState<string>("SEMUA")
+  const PAGE_SIZE = 12
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Karyawan | null>(null)
   const [delId, setDelId] = useState<string | null>(null)
@@ -141,6 +144,7 @@ export function KaryawanView() {
   const total = data?.length ?? 0
   const totalFixed = data?.filter((k) => k.tipe === TIPE_KARYAWAN.FIXED).length ?? 0
   const totalFlexible = data?.filter((k) => k.tipe === TIPE_KARYAWAN.FLEXIBLE).length ?? 0
+  const { paged: pagedData, page, totalPages, setPage } = usePagination(data ?? [], PAGE_SIZE)
 
   return (
     <div className="space-y-5">
@@ -207,18 +211,27 @@ export function KaryawanView() {
           ))}
         </div>
       ) : data && data.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {data.map((k) => (
-            <KaryawanCard
-              key={k.id}
-              k={k}
-              onEdit={() => {
-                setEditing(k)
-                setOpen(true)
-              }}
-              onDelete={() => setDelId(k.id)}
-            />
-          ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {pagedData.map((k) => (
+              <KaryawanCard
+                key={k.id}
+                k={k}
+                onEdit={() => {
+                  setEditing(k)
+                  setOpen(true)
+                }}
+                onDelete={() => setDelId(k.id)}
+              />
+            ))}
+          </div>
+          <PaginationBar
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
         </div>
       ) : (
         <EmptyState

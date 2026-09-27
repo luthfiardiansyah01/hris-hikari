@@ -1,10 +1,13 @@
 "use client"
 
+import { useMemo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { LucideIcon } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import {
   STATUS_SESI,
   STATUS_ABSENSI,
@@ -190,5 +193,98 @@ export function StatusKaryawanBadge({ status }: { status: string }) {
     <Badge variant="outline" className={isActive ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20" : "bg-muted text-muted-foreground"}>
       {isActive ? "Aktif" : "Nonaktif"}
     </Badge>
+  )
+}
+
+// ---------- Pagination ----------
+export function usePagination<T>(items: T[], pageSize = 20) {
+  const [page, setPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize))
+  const safePage = Math.min(page, totalPages)
+
+  const paged = useMemo(
+    () => items.slice((safePage - 1) * pageSize, safePage * pageSize),
+    [items, safePage, pageSize],
+  )
+
+  // Reset to page 1 whenever the source list changes length
+  const reset = () => setPage(1)
+
+  return { paged, page: safePage, totalPages, setPage, reset, total: items.length }
+}
+
+export function PaginationBar({
+  page,
+  totalPages,
+  total,
+  pageSize,
+  onPageChange,
+  className,
+}: {
+  page: number
+  totalPages: number
+  total: number
+  pageSize: number
+  onPageChange: (p: number) => void
+  className?: string
+}) {
+  if (totalPages <= 1) return null
+
+  const from = (page - 1) * pageSize + 1
+  const to = Math.min(page * pageSize, total)
+
+  // Build page number list with ellipsis
+  const pages: (number | "…")[] = []
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i)
+  } else {
+    pages.push(1)
+    if (page > 3) pages.push("…")
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i)
+    if (page < totalPages - 2) pages.push("…")
+    pages.push(totalPages)
+  }
+
+  return (
+    <div className={cn("flex flex-col items-center gap-2 sm:flex-row sm:justify-between", className)}>
+      <p className="text-xs text-muted-foreground">
+        {from}–{to} dari <span className="font-medium">{total}</span> data
+      </p>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          disabled={page === 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </Button>
+        {pages.map((p, i) =>
+          p === "…" ? (
+            <span key={`ellipsis-${i}`} className="px-1 text-xs text-muted-foreground">…</span>
+          ) : (
+            <Button
+              key={p}
+              variant={p === page ? "default" : "outline"}
+              size="icon"
+              className="h-7 w-7 text-xs"
+              onClick={() => onPageChange(p)}
+            >
+              {p}
+            </Button>
+          ),
+        )}
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          disabled={page === totalPages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
   )
 }

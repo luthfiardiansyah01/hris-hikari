@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Absensi & Payroll - Bimbel Cerdas",
+  title: "HRIS - PT Hikari Bridge Indonesia",
   description: "Sistem absensi dan payroll untuk bimbel/les privat dengan karyawan fixed time & tutor flexible time.",
   keywords: ["absensi", "payroll", "bimbel", "les privat", "tutor"],
 };

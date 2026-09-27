@@ -45,8 +45,8 @@ function AppFooter() {
     <footer className="mt-auto border-t bg-background/95">
       <div className="flex flex-col items-center justify-between gap-2 px-4 py-3 text-xs text-muted-foreground sm:flex-row">
         <div className="flex items-center gap-2">
-          <GraduationCap className="h-4 w-4 text-primary" />
-          <span>Sistem Absensi & Payroll Bimbel Cerdas</span>
+          <img src="/hikari-logo.png" alt="Hikari Bridge" className="h-4 w-auto object-contain" />
+          <span>Sistem Absensi & Payroll PT Hikari Bridge Indonesia</span>
         </div>
         <div className="flex items-center gap-3">
           <span>v1.0.0 · MVP</span>

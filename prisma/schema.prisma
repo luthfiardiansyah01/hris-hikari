@@ -193,7 +193,7 @@ model Pengaturan {
   toleransiTerlambatMenit Int     @default(1)
   checkInWindowMin        Int     @default(15) // minutes before session start
   checkInWindowMax        Int     @default(30) // max minutes before
-  namaPerusahaan          String  @default("Bimbel Cerdas")
+  namaPerusahaan          String  @default("PT Hikari Bridge Indonesia")
 }
 
 // ---------- Payroll ----------
