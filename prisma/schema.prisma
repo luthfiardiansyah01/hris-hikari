@@ -1,12 +1,11 @@
-// Prisma schema for Absensi & Payroll - Bimbel/Les Privat
-// SQLite for dev; portable to PostgreSQL.
+// Prisma schema for HRIS - PT Hikari Bridge Indonesia
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

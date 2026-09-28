@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+.next
+
+# Database lokal
+db/
+*.db
+*.db-journal
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Git
+.git
+.gitignore
+
+# Logs & temp
+*.log
+.DS_Store
+Thumbs.db
+
+# Dev only
+tests/
+examples/
+worklog.md
+agent-ctx/
+download/
+mini-services/

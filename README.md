@@ -64,43 +64,90 @@ Sistem Human Resource Information System (HRIS) internal untuk PT Hikari Bridge 
 
 ## Cara Menjalankan
 
-### Prasyarat
-- [Bun](https://bun.sh) v1.x
-- Node.js 20+
+### A. Dengan Docker (Direkomendasikan — untuk tim internal)
 
-### Instalasi
+> Prasyarat: [Docker Desktop](https://www.docker.com/products/docker-desktop/) sudah terinstall.
+
+**1. Salin file environment:**
+```bash
+cp .env.example .env
+```
+
+**2. (Opsional) Ganti password database di `.env`:**
+```
+DB_PASSWORD=password_anda
+APP_PORT=3000
+```
+
+**3. Jalankan semua service:**
+```bash
+docker compose up -d
+```
+
+Perintah ini otomatis akan:
+- Menjalankan PostgreSQL
+- Menjalankan migrasi skema & seed data dummy
+- Menjalankan aplikasi HRIS
+
+**4. Akses aplikasi:**
+- Dari komputer server: `http://localhost` atau `http://hris.hikari.local`
+- Dari komputer lain di jaringan yang sama: `http://hris.hikari.local` *(setelah setup hosts)*
+
+**Perintah Docker lainnya:**
+```bash
+# Lihat log aplikasi
+docker compose logs -f app
+
+# Lihat log Nginx
+docker compose logs -f nginx
+
+# Stop semua service
+docker compose down
+
+# Reset database (hapus semua data)
+docker compose down -v
+docker compose up -d
+```
+
+---
+
+### Setup Domain Internal `hris.hikari.local`
+
+Agar seluruh tim bisa akses via nama domain (bukan IP), jalankan script berikut **di setiap komputer** yang perlu akses:
+
+**Windows** *(jalankan PowerShell sebagai Administrator)*:
+```powershell
+.\scripts\setup-hosts.ps1
+```
+
+**Mac / Linux**:
+```bash
+sudo bash scripts/setup-hosts.sh
+```
+
+Script akan menanyakan IP server, lalu mendaftarkan `hris.hikari.local` secara otomatis. Setelah itu buka browser dan akses:
+
+```
+http://hris.hikari.local
+```
+
+---
+
+### B. Development Lokal (Tanpa Docker)
+
+> Prasyarat: [Bun](https://bun.sh) v1.x + PostgreSQL 15+
 
 ```bash
 bun install
-```
-
-### Setup Database
-
-```bash
-# Generate Prisma client
+cp .env.example .env
+# Edit .env → isi DATABASE_URL dengan koneksi PostgreSQL lokal
 bun run db:generate
-
-# Push skema ke database
 bun run db:push
-
-# Isi data dummy
 bun run db:seed
-```
-
-### Jalankan Development Server
-
-```bash
 bun run dev
 ```
 
 Akses di: [http://localhost:3000](http://localhost:3000)
-
-### Build Production
-
-```bash
-bun run build
-bun run start
-```
 
 ---
 

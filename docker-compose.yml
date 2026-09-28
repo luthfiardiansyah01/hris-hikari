@@ -1,0 +1,73 @@
+services:
+
+  # ── Database PostgreSQL ──────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: hikari_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hikari
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-hikari_secret}
+      POSTGRES_DB: hikari_hris
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hikari -d hikari_hris"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Migrasi & Seed (jalankan sekali, lalu berhenti) ──────────
+  migrate:
+    image: oven/bun:1
+    container_name: hikari_migrate
+    working_dir: /app
+    command: >
+      sh -c "bunx prisma db push --accept-data-loss && bun prisma/seed.ts"
+    environment:
+      DATABASE_URL: postgresql://hikari:${DB_PASSWORD:-hikari_secret}@db:5432/hikari_hris
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  # ── Aplikasi HRIS ─────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hikari_app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://hikari:${DB_PASSWORD:-hikari_secret}@db:5432/hikari_hris
+      NODE_ENV: production
+    expose:
+      - "3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Nginx Reverse Proxy ───────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: hikari_nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+    name: hikari_pgdata
